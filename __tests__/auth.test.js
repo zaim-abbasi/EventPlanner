@@ -9,8 +9,7 @@ describe('Auth Routes', () => {
   };
 
   beforeEach(() => {
-    // Clear users before each test
-    users.clear?.();
+    users.clear();
   });
 
   describe('POST /api/auth/register', () => {
@@ -21,6 +20,7 @@ describe('Auth Routes', () => {
 
       expect(res.statusCode).toBe(201);
       expect(res.body).toHaveProperty('token');
+      expect(typeof res.body.token).toBe('string');
     });
 
     it('should not register user with invalid email', async () => {
@@ -29,12 +29,34 @@ describe('Auth Routes', () => {
         .send({ ...testUser, email: 'invalid-email' });
 
       expect(res.statusCode).toBe(400);
+      expect(res.body).toHaveProperty('errors');
+    });
+
+    it('should not register user with short password', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ ...testUser, password: '12345' });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body).toHaveProperty('errors');
+    });
+
+    it('should not register duplicate email', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send(testUser);
+
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send(testUser);
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body).toHaveProperty('error', 'Email already registered');
     });
   });
 
   describe('POST /api/auth/login', () => {
     beforeEach(async () => {
-      // Register a user before testing login
       await request(app)
         .post('/api/auth/register')
         .send(testUser);
@@ -47,6 +69,7 @@ describe('Auth Routes', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body).toHaveProperty('token');
+      expect(typeof res.body.token).toBe('string');
     });
 
     it('should not login with incorrect password', async () => {
@@ -55,6 +78,16 @@ describe('Auth Routes', () => {
         .send({ ...testUser, password: 'wrongpassword' });
 
       expect(res.statusCode).toBe(401);
+      expect(res.body).toHaveProperty('error', 'Invalid credentials');
+    });
+
+    it('should not login with non-existent email', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ ...testUser, email: 'nonexistent@example.com' });
+
+      expect(res.statusCode).toBe(401);
+      expect(res.body).toHaveProperty('error', 'Invalid credentials');
     });
   });
 });
