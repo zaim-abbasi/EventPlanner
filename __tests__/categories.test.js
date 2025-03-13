@@ -1,5 +1,5 @@
 import request from 'supertest';
-import app from '../src/index.js';
+import app from '../src/app.js';
 import { users, categories } from '../src/data/store.js';
 
 describe('Category Routes', () => {
